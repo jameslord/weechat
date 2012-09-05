@@ -22,9 +22,12 @@
  */
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <libgen.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "../weechat-plugin.h"
 #include "script.h"
@@ -58,7 +61,7 @@ script_action_list ()
 
     scripts_loaded = 0;
 
-    for (i = 0; script_language[i]; i++)
+    for (i = 0; i < SCRIPT_NUM_LANGUAGES; i++)
     {
         snprintf (hdata_name, sizeof (hdata_name),
                   "%s_script", script_language[i]);
@@ -111,7 +114,7 @@ script_action_list_input (int send_to_buffer)
     buf[0] = '\0';
     length = 0;
 
-    for (i = 0; script_language[i]; i++)
+    for (i = 0; i < SCRIPT_NUM_LANGUAGES; i++)
     {
         snprintf (hdata_name, sizeof (hdata_name),
                   "%s_script", script_language[i]);
@@ -172,6 +175,15 @@ script_action_load (const char *name, int quiet)
                             _("%s: unknown language for script \"%s\""),
                             SCRIPT_PLUGIN_NAME, name);
         }
+        return;
+    }
+
+    /* check that plugin for this language is loaded */
+    if (!script_plugin_loaded[language])
+    {
+        weechat_printf (NULL,
+                        _("%s: plugin \"%s\" is not loaded"),
+                        SCRIPT_PLUGIN_NAME, script_language[language]);
         return;
     }
 
@@ -257,7 +269,7 @@ script_action_unload (const char *name, int quiet)
     else
     {
         /* unload script by using name (example: "iset") */
-        for (i = 0; script_language[i]; i++)
+        for (i = 0; i < SCRIPT_NUM_LANGUAGES; i++)
         {
             snprintf (hdata_name, sizeof (hdata_name),
                       "%s_script", script_language[i]);
@@ -363,7 +375,7 @@ script_action_reload (const char *name, int quiet)
     else
     {
         /* reload script by using name (example: "iset") */
-        for (i = 0; script_language[i]; i++)
+        for (i = 0; i < SCRIPT_NUM_LANGUAGES; i++)
         {
             snprintf (hdata_name, sizeof (hdata_name),
                       "%s_script", script_language[i]);
@@ -413,6 +425,7 @@ script_action_installnext_timer_cb (void *data, int remaining_calls)
 
 /*
  * script_action_install_process_cb: callback called when script is downloaded
+ *                                   (for installing it)
  */
 
 int
@@ -422,7 +435,7 @@ script_action_install_process_cb (void *data, const char *command,
 {
     char *pos, *filename, *filename2, str_signal[256];
     int quiet, length;
-    struct t_repo_script *ptr_script;
+    struct t_script_repo *ptr_script;
 
     quiet = (data) ? 1 : 0;
 
@@ -446,7 +459,8 @@ script_action_install_process_cb (void *data, const char *command,
             ptr_script = script_repo_search_by_name_ext (pos + 1);
             if (ptr_script)
             {
-                filename = script_config_get_script_download_filename (ptr_script);
+                filename = script_config_get_script_download_filename (ptr_script,
+                                                                       NULL);
                 if (filename)
                 {
                     length = 3 + strlen (filename) + 1;
@@ -480,20 +494,19 @@ script_action_install_process_cb (void *data, const char *command,
 }
 
 /*
- * script_action_install: install script(s) marked for install
+ * script_action_get_next_script_to_install: get next script to install
+ *                                           according to "install_order" in
+ *                                           script
  */
 
-void
-script_action_install (int quiet)
+struct t_script_repo *
+script_action_get_next_script_to_install ()
 {
-    struct t_repo_script *ptr_script, *ptr_script_to_install;
-    char *filename, *url;
-    int length;
-    struct t_hashtable *options;
+    struct t_script_repo *ptr_script, *ptr_script_to_install;
 
     ptr_script_to_install = NULL;
 
-    for (ptr_script = repo_scripts; ptr_script;
+    for (ptr_script = scripts_repo; ptr_script;
          ptr_script = ptr_script->next_script)
     {
         if (ptr_script->install_order > 0)
@@ -504,42 +517,79 @@ script_action_install (int quiet)
         }
     }
 
-    if (ptr_script_to_install)
-    {
-        filename = script_config_get_script_download_filename (ptr_script_to_install);
-        if (filename)
-        {
-            options = weechat_hashtable_new (8,
-                                             WEECHAT_HASHTABLE_STRING,
-                                             WEECHAT_HASHTABLE_STRING,
-                                             NULL,
-                                             NULL);
-            if (options)
-            {
-                length = 4 + strlen (ptr_script_to_install->url) + 1;
-                url = malloc (length);
-                if (url)
-                {
-                    if (!weechat_config_boolean (script_config_look_quiet_actions))
-                    {
-                        weechat_printf (NULL,
-                                        _("%s: downloading script \"%s\"..."),
-                                        SCRIPT_PLUGIN_NAME,
-                                        ptr_script_to_install->name_with_extension);
-                    }
+    return ptr_script_to_install;
+}
 
-                    snprintf (url, length, "url:%s",
-                              ptr_script_to_install->url);
-                    weechat_hashtable_set (options, "file_out", filename);
-                    weechat_hook_process_hashtable (url, options, 30000,
-                                                    &script_action_install_process_cb,
-                                                    (quiet) ? (void *)1 : (void *)0);
-                    free (url);
+/*
+ * script_action_install: install script(s) marked for install
+ */
+
+void
+script_action_install (int quiet)
+{
+    struct t_script_repo *ptr_script_to_install;
+    char *filename, *url;
+    int length;
+    struct t_hashtable *options;
+
+    while (1)
+    {
+        ptr_script_to_install = script_action_get_next_script_to_install ();
+
+        /* no more script to install? just exit function */
+        if (!ptr_script_to_install)
+            return;
+
+        /*
+         * script to install and plugin is loaded: exit loop and go on with
+         * install
+         */
+        if (script_plugin_loaded[ptr_script_to_install->language])
+            break;
+
+        /* plugin not loaded for language of script: display error */
+        weechat_printf (NULL,
+                        _("%s: script \"%s\" can not be installed because "
+                          "plugin \"%s\" is not loaded"),
+                        SCRIPT_PLUGIN_NAME,
+                        ptr_script_to_install->name_with_extension,
+                        script_language[ptr_script_to_install->language]);
+    }
+
+    filename = script_config_get_script_download_filename (ptr_script_to_install,
+                                                           NULL);
+    if (filename)
+    {
+        options = weechat_hashtable_new (8,
+                                         WEECHAT_HASHTABLE_STRING,
+                                         WEECHAT_HASHTABLE_STRING,
+                                         NULL,
+                                         NULL);
+        if (options)
+        {
+            length = 4 + strlen (ptr_script_to_install->url) + 1;
+            url = malloc (length);
+            if (url)
+            {
+                if (!weechat_config_boolean (script_config_look_quiet_actions))
+                {
+                    weechat_printf (NULL,
+                                    _("%s: downloading script \"%s\"..."),
+                                    SCRIPT_PLUGIN_NAME,
+                                    ptr_script_to_install->name_with_extension);
                 }
-                weechat_hashtable_free (options);
+
+                snprintf (url, length, "url:%s",
+                          ptr_script_to_install->url);
+                weechat_hashtable_set (options, "file_out", filename);
+                weechat_hook_process_hashtable (url, options, 30000,
+                                                &script_action_install_process_cb,
+                                                (quiet) ? (void *)1 : (void *)0);
+                free (url);
             }
-            free (filename);
+            weechat_hashtable_free (options);
         }
+        free (filename);
     }
 }
 
@@ -550,52 +600,12 @@ script_action_install (int quiet)
 void
 script_action_remove (const char *name, int quiet)
 {
-    struct t_repo_script *ptr_script;
+    struct t_script_repo *ptr_script;
     char str_signal[256], *filename;
     int length;
 
     ptr_script = script_repo_search_by_name_ext (name);
-    if (ptr_script)
-    {
-        if (!(ptr_script->status & SCRIPT_STATUS_INSTALLED))
-        {
-            if (!quiet)
-            {
-                weechat_printf (NULL,
-                                _("%s: script \"%s\" is not installed"),
-                                SCRIPT_PLUGIN_NAME, name);
-            }
-        }
-        else if (ptr_script->status & SCRIPT_STATUS_HELD)
-        {
-            if (!quiet)
-            {
-                weechat_printf (NULL,
-                                _("%s: script \"%s\" is held"),
-                                SCRIPT_PLUGIN_NAME, name);
-            }
-        }
-        else
-        {
-            length = 3 + strlen (ptr_script->name_with_extension) + 1;
-            filename = malloc (length);
-            if (filename)
-            {
-                snprintf (filename, length,
-                          "%s%s",
-                          (quiet && weechat_config_boolean (script_config_look_quiet_actions)) ? "-q " : "",
-                          ptr_script->name_with_extension);
-                snprintf (str_signal, sizeof (str_signal),
-                          "%s_script_remove",
-                          script_language[ptr_script->language]);
-                weechat_hook_signal_send (str_signal,
-                                          WEECHAT_HOOK_SIGNAL_STRING,
-                                          filename);
-                free (filename);
-            }
-        }
-    }
-    else
+    if (!ptr_script)
     {
         if (!quiet)
         {
@@ -603,6 +613,61 @@ script_action_remove (const char *name, int quiet)
                             _("%s: script \"%s\" not found"),
                             SCRIPT_PLUGIN_NAME, name);
         }
+        return;
+    }
+
+    /* check that script is installed */
+    if (!(ptr_script->status & SCRIPT_STATUS_INSTALLED))
+    {
+        if (!quiet)
+        {
+            weechat_printf (NULL,
+                            _("%s: script \"%s\" is not installed"),
+                            SCRIPT_PLUGIN_NAME, name);
+        }
+        return;
+    }
+
+    /* check that script is not held */
+    if (ptr_script->status & SCRIPT_STATUS_HELD)
+    {
+        if (!quiet)
+        {
+            weechat_printf (NULL,
+                            _("%s: script \"%s\" is held"),
+                            SCRIPT_PLUGIN_NAME, name);
+        }
+        return;
+    }
+
+    /* check that plugin for this language is loaded */
+    if (!script_plugin_loaded[ptr_script->language])
+    {
+        weechat_printf (NULL,
+                        _("%s: script \"%s\" can not be removed "
+                          "because plugin \"%s\" is not loaded"),
+                        SCRIPT_PLUGIN_NAME,
+                        ptr_script->name_with_extension,
+                        script_language[ptr_script->language]);
+        return;
+    }
+
+    /* ask plugin to remove script */
+    length = 3 + strlen (ptr_script->name_with_extension) + 1;
+    filename = malloc (length);
+    if (filename)
+    {
+        snprintf (filename, length,
+                  "%s%s",
+                  (quiet && weechat_config_boolean (script_config_look_quiet_actions)) ? "-q " : "",
+                  ptr_script->name_with_extension);
+        snprintf (str_signal, sizeof (str_signal),
+                  "%s_script_remove",
+                  script_language[ptr_script->language]);
+        weechat_hook_signal_send (str_signal,
+                                  WEECHAT_HOOK_SIGNAL_STRING,
+                                  filename);
+        free (filename);
     }
 }
 
@@ -614,7 +679,7 @@ script_action_remove (const char *name, int quiet)
 int
 script_action_hold (const char *name, int quiet)
 {
-    struct t_repo_script *ptr_script;
+    struct t_script_repo *ptr_script;
 
     ptr_script = script_repo_search_by_name_ext (name);
     if (ptr_script)
@@ -657,13 +722,245 @@ script_action_hold (const char *name, int quiet)
 }
 
 /*
+ * script_action_show_diff_process_cb: callback called when script is
+ *                                     downloaded (for showing source code
+ *                                     below script detail)
+ */
+
+int
+script_action_show_diff_process_cb (void *data, const char *command,
+                                    int return_code, const char *out,
+                                    const char *err)
+{
+    char **lines, *filename;
+    const char *color;
+    int num_lines, i, diff_color;
+
+    /* make C compiler happy */
+    (void) command;
+
+    if (script_buffer && script_buffer_detail_script
+        && ((return_code == WEECHAT_HOOK_PROCESS_RUNNING) || (return_code >= 0)))
+    {
+        if (out)
+        {
+            lines = weechat_string_split (out, "\n", 0, 0, &num_lines);
+            if (lines)
+            {
+                diff_color = weechat_config_boolean (script_config_look_diff_color);
+                for (i = 0; i < num_lines; i++)
+                {
+                    color = NULL;
+                    if (diff_color)
+                    {
+                        switch (lines[i][0])
+                        {
+                            case '-':
+                            case '<':
+                                color = weechat_color ("red");
+                                break;
+                            case '+':
+                            case '>':
+                                color = weechat_color ("green");
+                                break;
+                            case '@':
+                                color = weechat_color ("cyan");
+                                break;
+                        }
+                    }
+                    weechat_printf_y (script_buffer,
+                                      script_buffer_detail_script_last_line++,
+                                      "%s%s",
+                                      (color) ? color : "",
+                                      lines[i]);
+                }
+                weechat_string_free_split (lines);
+            }
+        }
+        else if (err)
+        {
+            lines = weechat_string_split (err, "\n", 0, 0, &num_lines);
+            if (lines)
+            {
+                for (i = 0; i < num_lines; i++)
+                {
+                    weechat_printf_y (script_buffer,
+                                      script_buffer_detail_script_last_line++,
+                                      "%s",
+                                      lines[i]);
+                }
+                weechat_string_free_split (lines);
+            }
+        }
+        if (return_code >= 0)
+        {
+            weechat_printf_y (script_buffer,
+                              script_buffer_detail_script_last_line++,
+                              "%s----------------------------------------"
+                              "----------------------------------------",
+                              weechat_color ("magenta"));
+        }
+    }
+
+    if ((return_code == WEECHAT_HOOK_PROCESS_ERROR) || (return_code >= 0))
+    {
+        /* last call to this callback: delete temporary file */
+        filename = (char *)data;
+        unlink (filename);
+        free (filename);
+    }
+
+    return WEECHAT_RC_OK;
+}
+
+/*
+ * script_action_show_source_process_cb: callback called when script is
+ *                                       downloaded (for showing source code
+ *                                       below script detail)
+ */
+
+int
+script_action_show_source_process_cb (void *data, const char *command,
+                                      int return_code, const char *out,
+                                      const char *err)
+{
+    char *pos, *filename, *filename_loaded, line[4096], *ptr_line;
+    char *diff_command;
+    const char *ptr_diff_command;
+    struct t_script_repo *ptr_script;
+    FILE *file;
+    int length, diff_made;
+
+    /* make C compiler happy */
+    (void) data;
+
+    if (return_code >= 0)
+    {
+        pos = strrchr (command, '/');
+
+        if ((err && err[0]) || (out && (strncmp (out, "error:", 6) == 0)))
+        {
+            weechat_printf (NULL,
+                            _("%s%s: error downloading script \"%s\": %s"),
+                            weechat_prefix ("error"),
+                            SCRIPT_PLUGIN_NAME,
+                            (pos) ? pos + 1 : "?",
+                            (err && err[0]) ? err : out + 6);
+            return WEECHAT_RC_OK;
+        }
+
+        if (pos)
+        {
+            ptr_script = script_repo_search_by_name_ext (pos + 1);
+            if (ptr_script)
+            {
+                filename = script_config_get_script_download_filename (ptr_script,
+                                                                       ".repository");
+                if (filename)
+                {
+                    /*
+                     * read file and display content on script buffer
+                     * (only if script buffer is still displaying detail of
+                     * this script)
+                     */
+                    if (script_buffer && script_buffer_detail_script
+                        && (script_buffer_detail_script == ptr_script))
+                    {
+                        file = fopen (filename, "r");
+                        if (file)
+                        {
+                            while (!feof (file))
+                            {
+                                ptr_line = fgets (line, sizeof (line) - 1, file);
+                                if (ptr_line)
+                                {
+                                    weechat_printf_y (script_buffer,
+                                                      script_buffer_detail_script_last_line++,
+                                                      "%s", ptr_line);
+                                }
+                            }
+                            fclose (file);
+                        }
+                        else
+                        {
+                            weechat_printf_y (script_buffer,
+                                              script_buffer_detail_script_last_line++,
+                                              _("Error: file not found"));
+                        }
+                        weechat_printf_y (script_buffer,
+                                          script_buffer_detail_script_last_line++,
+                                          "%s----------------------------------------"
+                                          "----------------------------------------",
+                                          weechat_color ("lightcyan"));
+                    }
+                    diff_made = 0;
+                    ptr_diff_command = script_config_get_diff_command ();
+                    if (ptr_diff_command && ptr_diff_command[0]
+                        && (ptr_script->status & SCRIPT_STATUS_NEW_VERSION))
+                    {
+                        /*
+                         * diff command set => get the diff with a new process,
+                         * file will be deleted later (in callback of this new
+                         * process)
+                         */
+                        filename_loaded = script_repo_get_filename_loaded (ptr_script);
+                        if (filename_loaded)
+                        {
+                            length = strlen (ptr_diff_command) + 1
+                                + strlen (filename_loaded) + 1
+                                + strlen (filename) + 1;
+                            diff_command = malloc (length);
+                            if (diff_command)
+                            {
+                                snprintf (diff_command, length,
+                                          "%s %s %s",
+                                          ptr_diff_command,
+                                          filename_loaded,
+                                          filename);
+                                script_buffer_detail_script_last_line++;
+                                script_buffer_detail_script_line_diff = script_buffer_detail_script_last_line;
+                                weechat_printf_y (script_buffer,
+                                                  script_buffer_detail_script_last_line++,
+                                                  "%s", diff_command);
+                                weechat_printf_y (script_buffer,
+                                                  script_buffer_detail_script_last_line++,
+                                                  "%s----------------------------------------"
+                                                  "----------------------------------------",
+                                                  weechat_color ("magenta"));
+                                weechat_hook_process (diff_command, 10000,
+                                                      &script_action_show_diff_process_cb,
+                                                      filename);
+                                diff_made = 1;
+                                free (diff_command);
+                            }
+                            free (filename_loaded);
+                        }
+                    }
+                    if (!diff_made)
+                    {
+                        /* no diff made: delete temporary file now */
+                        unlink (filename);
+                        free (filename);
+                    }
+                }
+            }
+        }
+    }
+
+    return WEECHAT_RC_OK;
+}
+
+/*
  * script_action_show: show detailed info on a script
  */
 
 void
 script_action_show (const char *name, int quiet)
 {
-    struct t_repo_script *ptr_script;
+    struct t_script_repo *ptr_script;
+    char *filename, *url;
+    int length;
+    struct t_hashtable *options;
 
     if (name)
     {
@@ -671,6 +968,51 @@ script_action_show (const char *name, int quiet)
         if (ptr_script)
         {
             script_buffer_show_detail_script (ptr_script);
+            if (weechat_config_boolean (script_config_look_display_source))
+            {
+                weechat_printf_y (script_buffer,
+                                  script_buffer_detail_script_last_line++,
+                                  _("Source code:"));
+                weechat_printf_y (script_buffer,
+                                  script_buffer_detail_script_last_line++,
+                                  "%s----------------------------------------"
+                                  "----------------------------------------",
+                                  weechat_color ("lightcyan"));
+                weechat_printf_y (script_buffer,
+                                  script_buffer_detail_script_last_line,
+                                  _("Downloading script..."));
+                weechat_printf_y (script_buffer,
+                                  script_buffer_detail_script_last_line + 1,
+                                  "%s----------------------------------------"
+                                  "----------------------------------------",
+                                  weechat_color ("lightcyan"));
+                filename = script_config_get_script_download_filename (ptr_script,
+                                                                       ".repository");
+                if (filename)
+                {
+                    options = weechat_hashtable_new (8,
+                                                     WEECHAT_HASHTABLE_STRING,
+                                                     WEECHAT_HASHTABLE_STRING,
+                                                     NULL,
+                                                     NULL);
+                    if (options)
+                    {
+                        length = 4 + strlen (ptr_script->url) + 1;
+                        url = malloc (length);
+                        if (url)
+                        {
+                            snprintf (url, length, "url:%s", ptr_script->url);
+                            weechat_hashtable_set (options, "file_out", filename);
+                            weechat_hook_process_hashtable (url, options, 30000,
+                                                            &script_action_show_source_process_cb,
+                                                            NULL);
+                            free (url);
+                        }
+                        weechat_hashtable_free (options);
+                    }
+                    free (filename);
+                }
+            }
         }
         else
         {
@@ -687,6 +1029,43 @@ script_action_show (const char *name, int quiet)
 }
 
 /*
+ * script_action_showdiff: jump to diff on buffer with detail of script
+ */
+
+void
+script_action_showdiff ()
+{
+    char str_command[64];
+    struct t_gui_window *window;
+    int diff, start_line_y, chat_height;
+
+    if (script_buffer && script_buffer_detail_script
+        && (script_buffer_detail_script_line_diff >= 0))
+    {
+        /* check if we are already on diff */
+        diff = 0;
+        window = weechat_window_search_with_buffer (script_buffer);
+        if (window)
+        {
+            script_buffer_get_window_info (window, &start_line_y, &chat_height);
+            diff = (start_line_y == script_buffer_detail_script_line_diff);
+        }
+
+        /* scroll to top of window */
+        weechat_command (script_buffer, "/window scroll_top");
+
+        /* if not currently on diff, jump to it */
+        if (!diff)
+        {
+            snprintf (str_command, sizeof (str_command),
+                      "/window scroll %d",
+                      script_buffer_detail_script_line_diff);
+            weechat_command (script_buffer, str_command);
+        }
+    }
+}
+
+/*
  * script_action_run: run planned actions
  *                    return 1 if an action was executed, otherwise 0
  */
@@ -696,7 +1075,7 @@ script_action_run ()
 {
     char **actions, **argv, **argv_eol, *ptr_action;
     int num_actions, argc, i, j, quiet, script_found;
-    struct t_repo_script *ptr_script;
+    struct t_script_repo *ptr_script;
 
     if (!script_actions)
         return 0;
@@ -877,10 +1256,14 @@ script_action_run ()
                                         quiet);
                     weechat_buffer_set (script_buffer, "display", "1");
                 }
+                else if (weechat_strcasecmp (argv[0], "showdiff") == 0)
+                {
+                    script_action_showdiff ();
+                }
                 else if (weechat_strcasecmp (argv[0], "upgrade") == 0)
                 {
                     script_found = 0;
-                    for (ptr_script = repo_scripts; ptr_script;
+                    for (ptr_script = scripts_repo; ptr_script;
                          ptr_script = ptr_script->next_script)
                     {
                         /*
@@ -963,7 +1346,7 @@ script_action_schedule (const char *action, int need_repository, int quiet)
     {
         if (script_repo_file_is_uptodate ())
         {
-            if (!repo_scripts)
+            if (!scripts_repo)
                 script_repo_file_read (quiet);
             script_action_run ();
         }
