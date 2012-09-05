@@ -35,7 +35,9 @@
 
 struct t_gui_buffer *script_buffer = NULL;
 int script_buffer_selected_line = 0;
-struct t_repo_script *script_buffer_detail_script = NULL;
+struct t_script_repo *script_buffer_detail_script = NULL;
+int script_buffer_detail_script_last_line = 0;
+int script_buffer_detail_script_line_diff = -1;
 
 
 /*
@@ -43,7 +45,7 @@ struct t_repo_script *script_buffer_detail_script = NULL;
  */
 
 void
-script_buffer_display_line_script (int line, struct t_repo_script *script)
+script_buffer_display_line_script (int line, struct t_script_repo *script)
 {
     char str_line[16384], str_item[1024], str_color_name[256], str_color[32];
     char str_format[256], str_date[64], str_key[2], utf_char[16], *tags;
@@ -357,15 +359,16 @@ script_buffer_detail_label (const char *text, int max_length)
  */
 
 void
-script_buffer_display_detail_script (struct t_repo_script *script)
+script_buffer_display_detail_script (struct t_script_repo *script)
 {
     struct tm *tm;
     char str_time[1024];
-    char *labels[] = { N_("Script"), N_("Version"), N_("Author"),
-                       N_("License"), N_("Description"), N_("Tags"),
-                       N_("Status"),  N_("Date added"), N_("Date updated"),
-                       N_("URL"), N_("MD5"), N_("Requires"), N_("Min WeeChat"),
-                       N_("Max WeeChat"), NULL };
+    char *labels[] = { N_("Script"), N_("Version"), N_("Version loaded"),
+                       N_("Author"), N_("License"), N_("Description"),
+                       N_("Tags"), N_("Status"),  N_("Date added"),
+                       N_("Date updated"), N_("URL"), N_("MD5"), N_("Requires"),
+                       N_("Min WeeChat"), N_("Max WeeChat"),
+                       NULL };
     int i, length, max_length, line;
 
     max_length = 0;
@@ -386,9 +389,15 @@ script_buffer_display_detail_script (struct t_repo_script *script)
                       weechat_color (weechat_config_string (script_config_color_text_extension)),
                       script_extension[script->language]);
     line++;
-    weechat_printf_y (script_buffer, line + 1, "%s: %s",
+    weechat_printf_y (script_buffer, line + 1, "%s: %s%s",
                       script_buffer_detail_label (_(labels[line]), max_length),
+                      weechat_color (weechat_config_string (script_config_color_text_version)),
                       script->version);
+    line++;
+    weechat_printf_y (script_buffer, line + 1, "%s: %s%s",
+                      script_buffer_detail_label (_(labels[line]), max_length),
+                      weechat_color (weechat_config_string (script_config_color_text_version_loaded)),
+                      (script->version_loaded) ? script->version_loaded : "-");
     line++;
     weechat_printf_y (script_buffer, line + 1,
                       "%s: %s <%s>",
@@ -420,27 +429,11 @@ script_buffer_display_detail_script (struct t_repo_script *script)
     else
     {
         weechat_printf_y (script_buffer, line + 1,
-                          "%s: %s%s (%s%s%s%s%s%s%s%s%s%s%s%s )",
+                          "%s: %s%s (%s)",
                           script_buffer_detail_label (_(labels[line]), max_length),
                           script_repo_get_status_for_display (script, "*iaHrN", 1),
                           weechat_color ("chat"),
-                          (script->popularity > 0) ? " " : "",
-                          (script->popularity > 0) ? _("popular") : "",
-                          (script->status & SCRIPT_STATUS_INSTALLED) ? " " : "",
-                          /* TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed) */
-                          (script->status & SCRIPT_STATUS_INSTALLED) ? _("installed") : "",
-                          (script->status & SCRIPT_STATUS_AUTOLOADED) ? " " : "",
-                          /* TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed) */
-                          (script->status & SCRIPT_STATUS_AUTOLOADED) ? _("autoloaded") : "",
-                          (script->status & SCRIPT_STATUS_HELD) ? " " : "",
-                          /* TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed) */
-                          (script->status & SCRIPT_STATUS_HELD) ? _("held") : "",
-                          (script->status & SCRIPT_STATUS_RUNNING) ? " " : "",
-                          /* TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed) */
-                          (script->status & SCRIPT_STATUS_RUNNING) ? _("running") : "",
-                          (script->status & SCRIPT_STATUS_NEW_VERSION) ? " " : "",
-                          /* TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed) */
-                          (script->status & SCRIPT_STATUS_NEW_VERSION) ? _("obsolete") : "");
+                          script_repo_get_status_desc_for_display (script, "*iaHrN"));
     }
     line++;
     tm = localtime (&script->date_added);
@@ -481,6 +474,10 @@ script_buffer_display_detail_script (struct t_repo_script *script)
                       "%s: %s",
                       script_buffer_detail_label (_(labels[line]), max_length),
                       (script->max_weechat) ? script->max_weechat : "-");
+    line++;
+
+    script_buffer_detail_script_last_line = line + 2;
+    script_buffer_detail_script_line_diff = -1;
 }
 
 /*
@@ -490,7 +487,7 @@ script_buffer_display_detail_script (struct t_repo_script *script)
 void
 script_buffer_refresh (int clear)
 {
-    struct t_repo_script *ptr_script;
+    struct t_script_repo *ptr_script;
     int line;
     char str_title[1024];
 
@@ -507,14 +504,14 @@ script_buffer_refresh (int clear)
     {
         snprintf (str_title, sizeof (str_title),
                   "%s",
-                  _("alt+d=back to list"));
+                  _("Alt+key/input: v=back to list d=jump to diff"));
     }
     else
     {
         snprintf (str_title, sizeof (str_title),
                   _("%d/%d scripts (filter: %s) | Sort: %s | "
                     "Alt+key/input: i=install r=remove l=load L=reload "
-                    "u=unload h=(un)hold d=show detail | Input: q=close "
+                    "u=unload h=(un)hold v=view script | Input: q=close "
                     "$=refresh s:x,y=sort words=filter *=reset filter | "
                     "Mouse: left=select right=install/remove"),
                   script_repo_count_displayed,
@@ -533,7 +530,7 @@ script_buffer_refresh (int clear)
     {
         /* list of scripts */
         line = 0;
-        for (ptr_script = repo_scripts; ptr_script;
+        for (ptr_script = scripts_repo; ptr_script;
              ptr_script = ptr_script->next_script)
         {
             if (ptr_script->displayed)
@@ -571,7 +568,7 @@ script_buffer_set_current_line (int line)
  */
 
 void
-script_buffer_show_detail_script (struct t_repo_script *script)
+script_buffer_show_detail_script (struct t_script_repo *script)
 {
     if (!script_buffer)
         return;
@@ -709,14 +706,15 @@ int
 script_buffer_input_cb (void *data, struct t_gui_buffer *buffer,
                         const char *input_data)
 {
-    char *actions[][2] = { { "l", "load"    },
-                           { "u", "unload"  },
-                           { "L", "reload"  },
-                           { "i", "install" },
-                           { "r", "remove"  },
-                           { "h", "hold"    },
-                           { "d", "show"    },
-                           { NULL, NULL     } };
+    char *actions[][2] = { { "l", "load"     },
+                           { "u", "unload"   },
+                           { "L", "reload"   },
+                           { "i", "install"  },
+                           { "r", "remove"   },
+                           { "h", "hold"     },
+                           { "v", "show"     },
+                           { "d", "showdiff" },
+                           { NULL, NULL      } };
     char str_command[64];
     int i;
 
@@ -730,24 +728,27 @@ script_buffer_input_cb (void *data, struct t_gui_buffer *buffer,
         return WEECHAT_RC_OK;
     }
 
-    /* change sort keys on buffer */
-    if (strncmp (input_data, "s:", 2) == 0)
+    if (!script_buffer_detail_script)
     {
-        if (input_data[2])
-            weechat_config_option_set (script_config_look_sort, input_data + 2, 1);
-        else
-            weechat_config_option_reset (script_config_look_sort, 1);
-        return WEECHAT_RC_OK;
-    }
+        /* change sort keys on buffer */
+        if (strncmp (input_data, "s:", 2) == 0)
+        {
+            if (input_data[2])
+                weechat_config_option_set (script_config_look_sort, input_data + 2, 1);
+            else
+                weechat_config_option_reset (script_config_look_sort, 1);
+            return WEECHAT_RC_OK;
+        }
 
-    /* refresh buffer */
-    if (strcmp (input_data, "$") == 0)
-    {
-        script_get_loaded_scripts ();
-        script_repo_remove_all ();
-        script_repo_file_read (1);
-        script_buffer_refresh (1);
-        return WEECHAT_RC_OK;
+        /* refresh buffer */
+        if (strcmp (input_data, "$") == 0)
+        {
+            script_get_loaded_plugins_and_scripts ();
+            script_repo_remove_all ();
+            script_repo_file_read (1);
+            script_buffer_refresh (1);
+            return WEECHAT_RC_OK;
+        }
     }
 
     /* execute action on a script */
@@ -763,7 +764,8 @@ script_buffer_input_cb (void *data, struct t_gui_buffer *buffer,
     }
 
     /* filter scripts with given text */
-    script_repo_filter_scripts (input_data);
+    if (!script_buffer_detail_script)
+        script_repo_filter_scripts (input_data);
 
     return WEECHAT_RC_OK;
 }
@@ -812,14 +814,15 @@ script_buffer_set_callbacks ()
 void
 script_buffer_set_keys ()
 {
-    char *keys[][2] = { { "meta-l",  "load"    },
-                        { "meta-u",  "unload"  },
-                        { "meta-L",  "reload"  },
-                        { "meta-i",  "install" },
-                        { "meta-r",  "remove"  },
-                        { "meta-h",  "hold"    },
-                        { "meta-d",  "show"    },
-                        { NULL,     NULL       } };
+    char *keys[][2] = { { "meta-l",  "load"     },
+                        { "meta-u",  "unload"   },
+                        { "meta-L",  "reload"   },
+                        { "meta-i",  "install"  },
+                        { "meta-r",  "remove"   },
+                        { "meta-h",  "hold"     },
+                        { "meta-v",  "show"     },
+                        { "meta-d",  "showdiff" },
+                        { NULL,     NULL        } };
     char str_key[64], str_command[64];
     int i;
 

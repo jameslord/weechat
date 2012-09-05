@@ -20,7 +20,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WeeChat 0.3.9-dev\n"
 "Report-Msgid-Bugs-To: flashcode@flashtux.org\n"
-"POT-Creation-Date: 2012-08-25 19:27+0200\n"
+"POT-Creation-Date: 2012-09-04 13:19+0200\n"
 "PO-Revision-Date: 2012-08-20 15:20+0200\n"
 "Last-Translator: AYANOKOUZI, Ryuunosuke <i38w7i3@yahoo.co.jp>\n"
 "Language-Team: Japanese <https://github.com/l/WeeChat>\n"
@@ -1349,6 +1349,7 @@ msgstr "コマンドライン関数"
 msgid "<action> [<arguments>]"
 msgstr "<action> [<arguments>]"
 
+#, fuzzy
 msgid ""
 "list of actions:\n"
 "  return: simulate key \"enter\"\n"
@@ -1397,6 +1398,7 @@ msgid ""
 "  set_unread_current_buffer: set unread marker for current buffer\n"
 "  switch_active_buffer: switch to next merged buffer\n"
 "  switch_active_buffer_previous: switch to previous merged buffer\n"
+"  zoom_merged_buffer: zoom on merged buffer\n"
 "  insert: insert text in command line\n"
 "  paste_start: start paste (bracketed paste mode)\n"
 "  paste_stop: stop paste (bracketed paste mode)\n"
@@ -6583,6 +6585,10 @@ msgstr "%s%s[%s%s%s] %s%s%s は %s%s %s(%s%s%s)%s によって %s に招待さ�
 msgid "%s%s[%s%s%s] %s%s%s invited by %s%s %s(%s%s%s)"
 msgstr "%s%s[%s%s%s] %s%s%s は %s%s %s(%s%s%s) によって招待されました"
 
+#, fuzzy, c-format
+msgid "%s%s[%s%s%s] %s%s%s invited"
+msgstr "%s%s[%s%s%s] %s%s%s は %s%s %s(%s%s%s) によって招待されました"
+
 #. TRANSLATORS: "%s" after "on" is a date
 #, c-format
 msgid "%s%s[%s%s%s]%s exception %s%s%s by %s%s %s(%s%s%s)%s on %s"
@@ -6660,7 +6666,7 @@ msgstr ""
 "じています"
 
 #, fuzzy, c-format
-msgid "%s: nickname \"%s\" is already in use, trying nickname \"%s\""
+msgid "%s%s: nickname \"%s\" is already in use, trying nickname \"%s\""
 msgstr ""
 "%s: ニックネーム \"%s\" は既に使われています、ニックネーム #%d (\"%s\") を試"
 "行しています"
@@ -6790,8 +6796,8 @@ msgstr "%s: サーバに再接続中 %d %s、%d %s"
 msgid "%s%s: reconnecting to server in %d %s"
 msgstr "%s: サーバに再接続中 %d %s"
 
-#, c-format
-msgid "%s: switching address to %s/%d"
+#, fuzzy, c-format
+msgid "%s%s: switching address to %s/%d"
 msgstr "%s: アドレスの変更中 %s/%d"
 
 #, fuzzy, c-format
@@ -6862,8 +6868,8 @@ msgstr "%s%s: メモリが足りません"
 msgid "%s%s: timeout"
 msgstr "%s%s: タイムアウト"
 
-#, c-format
-msgid "gnutls: connected using %d-bit Diffie-Hellman shared secret exchange"
+#, fuzzy, c-format
+msgid "%sgnutls: connected using %d-bit Diffie-Hellman shared secret exchange"
 msgstr "gnutls: %d-ビット Diffie-Hellman 共有鍵交換を使って接続中"
 
 #, c-format
@@ -6874,7 +6880,8 @@ msgstr "%sgnutls: ピア証明書の確認中にエラー"
 msgid "%sgnutls: peer's certificate is NOT trusted"
 msgstr "%sgnutls: ピア証明書は信頼できません"
 
-msgid "gnutls: peer's certificate is trusted"
+#, fuzzy, c-format
+msgid "%sgnutls: peer's certificate is trusted"
 msgstr "gnutls: ピア証明書は信頼できます"
 
 #, c-format
@@ -6885,13 +6892,13 @@ msgstr "%sgnutls: ピア証明書に未知の問題"
 msgid "%sgnutls: the certificate has been revoked"
 msgstr "%sgnutls: 証明書は破棄されました"
 
-#, c-format
-msgid "gnutls: receiving %d certificate"
-msgid_plural "gnutls: receiving %d certificates"
+#, fuzzy, c-format
+msgid "%sgnutls: receiving %d certificate"
+msgid_plural "%sgnutls: receiving %d certificates"
 msgstr[0] "gnutls: %d 個の証明書を受け取りました"
 
-#, c-format
-msgid " - certificate[%d] info:"
+#, fuzzy, c-format
+msgid "%s - certificate[%d] info:"
 msgstr " - 証明書[%d] 情報:"
 
 #, c-format
@@ -6906,23 +6913,24 @@ msgstr "%sgnutls: 証明書はまだ使えません"
 msgid "%sgnutls: the hostname in the certificate does NOT match \"%s\""
 msgstr "%sgnutls: 証明書内のホストネームは \"%s\" とマッチしません"
 
-msgid "gnutls: sending one certificate"
+#, fuzzy, c-format
+msgid "%sgnutls: sending one certificate"
 msgstr "gnutls: 一通の証明書の送信中"
 
 #, c-format
 msgid "%sgnutls: invalid certificate \"%s\", error: %s"
 msgstr "%sgnutls: 無効な証明書 \"%s\"、エラー: %s"
 
-#, c-format
-msgid " - client certificate info (%s):"
+#, fuzzy, c-format
+msgid "%s - client certificate info (%s):"
 msgstr " - クライアント証明書情報 (%s):"
 
 #, c-format
 msgid "%sgnutls: unable to read certifcate \"%s\""
 msgstr "%sgnutls: 証明書 \"%s\" が読めません"
 
-#, c-format
-msgid "%s%s: unknown address server \"%s\", cannot connect"
+#, fuzzy, c-format
+msgid "%s%s: unknown address for server \"%s\", cannot connect"
 msgstr "%s%s: サーバ \"%s\" のアドレスが不明、接続できません"
 
 #, c-format
@@ -8264,6 +8272,10 @@ msgid "%s: unknown language for script \"%s\""
 msgstr "%s: スクリプト \"%s\" のアンロード中"
 
 #, fuzzy, c-format
+msgid "%s: plugin \"%s\" is not loaded"
+msgstr "%s%s: スクリプト \"%s\" はロードされていません"
+
+#, fuzzy, c-format
 msgid "%s: script \"%s\" is not loaded"
 msgstr "%s%s: スクリプト \"%s\" はロードされていません"
 
@@ -8272,8 +8284,18 @@ msgid "%s%s: error downloading script \"%s\": %s"
 msgstr "%s: スクリプト \"%s\" のアンロード中"
 
 #, fuzzy, c-format
+msgid ""
+"%s: script \"%s\" can not be installed because plugin \"%s\" is not loaded"
+msgstr ""
+"%sエラー: 関数 \"%s\" がプラグイン \"%s\" の中に見つかりません、ロード失敗"
+
+#, fuzzy, c-format
 msgid "%s: downloading script \"%s\"..."
 msgstr "%s: スクリプト \"%s\" のアンロード中"
+
+#, fuzzy, c-format
+msgid "%s: script \"%s\" not found"
+msgstr "%s%s: スクリプト \"%s\" が見つかりません"
 
 #, fuzzy, c-format
 msgid "%s: script \"%s\" is not installed"
@@ -8284,12 +8306,25 @@ msgid "%s: script \"%s\" is held"
 msgstr "%s: スクリプト \"%s\" がアンロードされました"
 
 #, fuzzy, c-format
-msgid "%s: script \"%s\" not found"
-msgstr "%s%s: スクリプト \"%s\" が見つかりません"
+msgid ""
+"%s: script \"%s\" can not be removed because plugin \"%s\" is not loaded"
+msgstr ""
+"%sエラー: 関数 \"%s\" がプラグイン \"%s\" の中に見つかりません、ロード失敗"
 
 #, fuzzy, c-format
 msgid "%s: script \"%s\" is not held any more"
 msgstr "%s%s: スクリプト \"%s\" はロードされていません"
+
+#, fuzzy
+msgid "Error: file not found"
+msgstr "%sエラー: バッファが見つかりません"
+
+msgid "Source code:"
+msgstr ""
+
+#, fuzzy
+msgid "Downloading script..."
+msgstr "%s: スクリプト \"%s\" のアンロード中"
 
 #, fuzzy, c-format
 msgid "%s: script \"%s\" is already installed and up-to-date"
@@ -8304,6 +8339,10 @@ msgstr ""
 
 msgid "Version"
 msgstr ""
+
+#, fuzzy
+msgid "Version loaded"
+msgstr "ロード済みプラグイン:"
 
 msgid "Author"
 msgstr ""
@@ -8344,36 +8383,13 @@ msgstr "WeeChat の終了"
 msgid "Max WeeChat"
 msgstr "WeeChat の終了"
 
-msgid "popular"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "installed"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "autoloaded"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "held"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "running"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "obsolete"
-msgstr ""
-
-msgid "alt+d=back to list"
+msgid "Alt+key/input: v=back to list d=jump to diff"
 msgstr ""
 
 #, c-format
 msgid ""
 "%d/%d scripts (filter: %s) | Sort: %s | Alt+key/input: i=install r=remove "
-"l=load L=reload u=unload h=(un)hold d=show detail | Input: q=close $=refresh "
+"l=load L=reload u=unload h=(un)hold v=view script | Input: q=close $=refresh "
 "s:x,y=sort words=filter *=reset filter | Mouse: left=select right=install/"
 "remove"
 msgstr ""
@@ -8431,6 +8447,7 @@ msgid ""
 "  alt+L  reload script\n"
 "  alt+u  unload script\n"
 "  alt+h  (un)hold script\n"
+"  alt+v  view script\n"
 "\n"
 "Input allowed on script buffer:\n"
 "  i/r/l/L/u/h  action on script (same as keys above)\n"
@@ -8476,6 +8493,21 @@ msgid ""
 "%e=extension, %l=language, %L=license, %n=name with extension, %N=name, "
 "%r=requirements, %s=status, %t=tags, %u=date updated, %v=version, %V=version "
 "loaded, %w=min_weechat, %W=max_weechat)"
+msgstr ""
+
+msgid "colorize output of diff"
+msgstr ""
+
+msgid ""
+"command used to show differences between script installed and the new "
+"version in repository (\"auto\" = auto detect diff command (git or diff), "
+"empty value = disable diff, other string = name of command, for example "
+"\"diff\")"
+msgstr ""
+
+msgid ""
+"display source code of script on buffer with detail on a script (script is "
+"downloaded in a temporary file when detail on script is displayed)"
 msgstr ""
 
 msgid ""
@@ -8625,6 +8657,30 @@ msgstr ""
 "スクリプト名 (ワイルドカードとして \"*\" で始めるか終われる) (オプション)"
 
 msgid "scripts from repository"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "popular"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "installed"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "autoloaded"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "held"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "running"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "obsolete"
 msgstr ""
 
 #, fuzzy, c-format

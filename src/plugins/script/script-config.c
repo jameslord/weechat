@@ -22,8 +22,11 @@
  */
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "../weechat-plugin.h"
 #include "script.h"
@@ -40,6 +43,9 @@ struct t_config_section *script_config_section_scripts = NULL;
 /* script config, look section */
 
 struct t_config_option *script_config_look_columns;
+struct t_config_option *script_config_look_diff_color;
+struct t_config_option *script_config_look_diff_command;
+struct t_config_option *script_config_look_display_source;
 struct t_config_option *script_config_look_quiet_actions;
 struct t_config_option *script_config_look_sort;
 struct t_config_option *script_config_look_translate_description;
@@ -81,6 +87,59 @@ struct t_config_option *script_config_scripts_dir;
 struct t_config_option *script_config_scripts_hold;
 struct t_config_option *script_config_scripts_url;
 
+
+/*
+ * script_config_get_diff_command: get diff command
+ *                                 if option is "auto", try to find git, and
+ *                                 fallbacks on "diff" if not found
+ *                                 return NULL if no diff command is set
+ */
+
+const char *
+script_config_get_diff_command ()
+{
+    const char *diff_command, *dir_separator;
+    static char result[64];
+    struct stat st;
+    char *path, **paths, bin[4096];
+    int num_paths, i, rc;
+
+    diff_command = weechat_config_string (script_config_look_diff_command);
+    if (!diff_command || !diff_command[0])
+        return NULL;
+
+    if (strcmp (diff_command, "auto") == 0)
+    {
+        dir_separator = weechat_info_get ("dir_separator", "");
+        path = getenv ("PATH");
+        result[0] = '\0';
+        if (dir_separator && path)
+        {
+            paths = weechat_string_split (path, ":", 0, 0, &num_paths);
+            if (paths)
+            {
+                for (i = 0; i < num_paths; i++)
+                {
+                    snprintf (bin, sizeof (bin), "%s%s%s",
+                              paths[i], dir_separator, "git");
+                    rc = stat (bin, &st);
+                    if ((rc == 0) && (S_ISREG(st.st_mode)))
+                    {
+                        snprintf (result, sizeof (result),
+                                  "git diff --no-index");
+                        break;
+                    }
+                }
+                weechat_string_free_split (paths);
+            }
+        }
+        if (!result[0])
+            snprintf (result, sizeof (result), "diff");
+        return result;
+    }
+
+    return diff_command;
+}
 
 /*
  * script_config_get_dir: get local directory for script
@@ -138,21 +197,31 @@ script_config_get_xml_filename ()
  * script_config_get_script_download_filename: get filename for a script to
  *                                             download, for eample:
  *                                             "/home/xxx/.weechat/script/iset.pl"
+ *                                             (if suffix is not NULL, it is
+ *                                             added to filename)
  *                                             Note: result must be freed after
  *                                             use
  */
 
 char *
-script_config_get_script_download_filename (struct t_repo_script *script)
+script_config_get_script_download_filename (struct t_script_repo *script,
+                                            const char *suffix)
 {
     char *path, *filename;
     int length;
 
     path = script_config_get_dir ();
-    length = strlen (path) + 1 + strlen (script->name_with_extension) + 1;
+    length = strlen (path) + 1 + strlen (script->name_with_extension)
+        + ((suffix) ? strlen (suffix) : 0) + 1;
     filename = malloc (length);
     if (filename)
-        snprintf (filename, length, "%s/%s", path, script->name_with_extension);
+    {
+        snprintf (filename, length,
+                  "%s/%s%s",
+                  path,
+                  script->name_with_extension,
+                  (suffix) ? suffix : "");
+    }
     free (path);
     return filename;
 }
@@ -185,7 +254,7 @@ script_config_reload_scripts_cb (void *data, struct t_config_option *option)
     (void) data;
     (void) option;
 
-    if (repo_scripts)
+    if (scripts_repo)
     {
         script_repo_remove_all ();
         script_repo_file_read (1);
@@ -359,6 +428,29 @@ script_config_init ()
            "%W=max_weechat)"),
         NULL, 0, 0, "%s %n %V %v %u | %d | %t", NULL, 0,
         NULL, NULL, &script_config_refresh_cb, NULL, NULL, NULL);
+    script_config_look_diff_color = weechat_config_new_option (
+        script_config_file, ptr_section,
+        "diff_color", "boolean",
+        N_("colorize output of diff"),
+        NULL, 0, 0, "on", NULL, 0,
+        NULL, NULL, NULL, NULL, NULL, NULL);
+    script_config_look_diff_command = weechat_config_new_option (
+        script_config_file, ptr_section,
+        "diff_command", "string",
+        N_("command used to show differences between script installed and the "
+           "new version in repository (\"auto\" = auto detect diff command (git "
+           "or diff), empty value = disable diff, other string = name of "
+           "command, for example \"diff\")"),
+        NULL, 0, 0, "auto", NULL, 0,
+        NULL, NULL, NULL, NULL, NULL, NULL);
+    script_config_look_display_source = weechat_config_new_option (
+        script_config_file, ptr_section,
+        "display_source", "boolean",
+        N_("display source code of script on buffer with detail on a script "
+           "(script is downloaded in a temporary file when detail on script "
+           "is displayed)"),
+        NULL, 0, 0, "on", NULL, 0,
+        NULL, NULL, NULL, NULL, NULL, NULL);
     script_config_look_quiet_actions = weechat_config_new_option (
         script_config_file, ptr_section,
         "quiet_actions", "boolean",

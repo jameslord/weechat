@@ -21,7 +21,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WeeChat 0.3.9-dev\n"
 "Report-Msgid-Bugs-To: flashcode@flashtux.org\n"
-"POT-Creation-Date: 2012-08-25 19:27+0200\n"
+"POT-Creation-Date: 2012-09-04 13:19+0200\n"
 "PO-Revision-Date: 2012-08-20 15:20+0200\n"
 "Last-Translator: Aleksey V Zapparov AKA ixti <ixti@member.fsf.org>\n"
 "Language-Team: weechat-dev <weechat-dev@nongnu.org>\n"
@@ -1288,6 +1288,7 @@ msgid ""
 "  set_unread_current_buffer: set unread marker for current buffer\n"
 "  switch_active_buffer: switch to next merged buffer\n"
 "  switch_active_buffer_previous: switch to previous merged buffer\n"
+"  zoom_merged_buffer: zoom on merged buffer\n"
 "  insert: insert text in command line\n"
 "  paste_start: start paste (bracketed paste mode)\n"
 "  paste_stop: stop paste (bracketed paste mode)\n"
@@ -6080,6 +6081,10 @@ msgstr "%s[%s%s%s] %s%s%s забанен пользователем "
 msgid "%s%s[%s%s%s] %s%s%s invited by %s%s %s(%s%s%s)"
 msgstr "%s[%s%s%s] %s%s%s забанен пользователем "
 
+#, fuzzy, c-format
+msgid "%s%s[%s%s%s] %s%s%s invited"
+msgstr "%s[%s%s%s] %s%s%s забанен пользователем "
+
 #. TRANSLATORS: "%s" after "on" is a date
 #, fuzzy, c-format
 msgid "%s%s[%s%s%s]%s exception %s%s%s by %s%s %s(%s%s%s)%s on %s"
@@ -6162,7 +6167,7 @@ msgid ""
 msgstr "%s: все предложенные ники заняты, отключаюсь от сервера!\n"
 
 #, fuzzy, c-format
-msgid "%s: nickname \"%s\" is already in use, trying nickname \"%s\""
+msgid "%s%s: nickname \"%s\" is already in use, trying nickname \"%s\""
 msgstr "%s: ник \"%s\" уже используется, пробую второй ник \"%s\"\n"
 
 #, fuzzy, c-format
@@ -6284,7 +6289,7 @@ msgid "%s%s: reconnecting to server in %d %s"
 msgstr "%s: Повторное подключение к серверу через %d секунд\n"
 
 #, fuzzy, c-format
-msgid "%s: switching address to %s/%d"
+msgid "%s%s: switching address to %s/%d"
 msgstr "%s IP адрес не найден\n"
 
 #, fuzzy, c-format
@@ -6354,7 +6359,7 @@ msgid "%s%s: timeout"
 msgstr "%s нет аргумента для параметра \"%s\"\n"
 
 #, c-format
-msgid "gnutls: connected using %d-bit Diffie-Hellman shared secret exchange"
+msgid "%sgnutls: connected using %d-bit Diffie-Hellman shared secret exchange"
 msgstr ""
 
 #, c-format
@@ -6365,8 +6370,9 @@ msgstr ""
 msgid "%sgnutls: peer's certificate is NOT trusted"
 msgstr ""
 
-msgid "gnutls: peer's certificate is trusted"
-msgstr ""
+#, fuzzy, c-format
+msgid "%sgnutls: peer's certificate is trusted"
+msgstr "Не могу записать лог-файл \"%s\"\n"
 
 #, c-format
 msgid "%sgnutls: peer's certificate issuer is unknown"
@@ -6377,14 +6383,14 @@ msgid "%sgnutls: the certificate has been revoked"
 msgstr "Не могу записать лог-файл \"%s\"\n"
 
 #, fuzzy, c-format
-msgid "gnutls: receiving %d certificate"
-msgid_plural "gnutls: receiving %d certificates"
+msgid "%sgnutls: receiving %d certificate"
+msgid_plural "%sgnutls: receiving %d certificates"
 msgstr[0] "Не могу записать лог-файл \"%s\"\n"
 msgstr[1] "Не могу записать лог-файл \"%s\"\n"
 msgstr[2] "Не могу записать лог-файл \"%s\"\n"
 
 #, c-format
-msgid " - certificate[%d] info:"
+msgid "%s - certificate[%d] info:"
 msgstr ""
 
 #, fuzzy, c-format
@@ -6399,8 +6405,8 @@ msgstr ""
 msgid "%sgnutls: the hostname in the certificate does NOT match \"%s\""
 msgstr "Не могу записать лог-файл \"%s\"\n"
 
-#, fuzzy
-msgid "gnutls: sending one certificate"
+#, fuzzy, c-format
+msgid "%sgnutls: sending one certificate"
 msgstr "Не могу записать лог-файл \"%s\"\n"
 
 #, fuzzy, c-format
@@ -6408,7 +6414,7 @@ msgid "%sgnutls: invalid certificate \"%s\", error: %s"
 msgstr "Не могу записать лог-файл \"%s\"\n"
 
 #, c-format
-msgid " - client certificate info (%s):"
+msgid "%s - client certificate info (%s):"
 msgstr ""
 
 #, fuzzy, c-format
@@ -6416,7 +6422,7 @@ msgid "%sgnutls: unable to read certifcate \"%s\""
 msgstr "Не могу записать лог-файл \"%s\"\n"
 
 #, fuzzy, c-format
-msgid "%s%s: unknown address server \"%s\", cannot connect"
+msgid "%s%s: unknown address for server \"%s\", cannot connect"
 msgstr "%s ник \"%s\" не найден для команды \"%s\"\n"
 
 #, fuzzy, c-format
@@ -7703,6 +7709,10 @@ msgid "%s: unknown language for script \"%s\""
 msgstr "сессия: загружаю сервер \"%s\"\n"
 
 #, fuzzy, c-format
+msgid "%s: plugin \"%s\" is not loaded"
+msgstr "%s сервер \"%s\" не найден\n"
+
+#, fuzzy, c-format
 msgid "%s: script \"%s\" is not loaded"
 msgstr "%s сервер \"%s\" не найден\n"
 
@@ -7711,8 +7721,19 @@ msgid "%s%s: error downloading script \"%s\": %s"
 msgstr "сессия: загружаю сервер \"%s\"\n"
 
 #, fuzzy, c-format
+msgid ""
+"%s: script \"%s\" can not be installed because plugin \"%s\" is not loaded"
+msgstr ""
+"%s функция \"weechat_plugin_init\" не найдена в plugin'е \"%s\", загрузка не "
+"удалась\n"
+
+#, fuzzy, c-format
 msgid "%s: downloading script \"%s\"..."
 msgstr "сессия: загружаю сервер \"%s\"\n"
+
+#, fuzzy, c-format
+msgid "%s: script \"%s\" not found"
+msgstr "%s сервер \"%s\" не найден\n"
 
 #, fuzzy, c-format
 msgid "%s: script \"%s\" is not installed"
@@ -7723,12 +7744,26 @@ msgid "%s: script \"%s\" is held"
 msgstr "Plugin \"%s\" выгружен.\n"
 
 #, fuzzy, c-format
-msgid "%s: script \"%s\" not found"
-msgstr "%s сервер \"%s\" не найден\n"
+msgid ""
+"%s: script \"%s\" can not be removed because plugin \"%s\" is not loaded"
+msgstr ""
+"%s функция \"weechat_plugin_init\" не найдена в plugin'е \"%s\", загрузка не "
+"удалась\n"
 
 #, fuzzy, c-format
 msgid "%s: script \"%s\" is not held any more"
 msgstr "%s сервер \"%s\" не найден\n"
+
+#, fuzzy
+msgid "Error: file not found"
+msgstr "%s plugin \"%s\" не найден\n"
+
+msgid "Source code:"
+msgstr ""
+
+#, fuzzy
+msgid "Downloading script..."
+msgstr "сессия: загружаю сервер \"%s\"\n"
 
 #, fuzzy, c-format
 msgid "%s: script \"%s\" is already installed and up-to-date"
@@ -7743,6 +7778,10 @@ msgstr ""
 
 msgid "Version"
 msgstr ""
+
+#, fuzzy
+msgid "Version loaded"
+msgstr "Загруженные plugin'ы\n"
 
 msgid "Author"
 msgstr ""
@@ -7784,36 +7823,13 @@ msgstr "слоган WeeChat"
 msgid "Max WeeChat"
 msgstr "слоган WeeChat"
 
-msgid "popular"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "installed"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "autoloaded"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "held"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "running"
-msgstr ""
-
-#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
-msgid "obsolete"
-msgstr ""
-
-msgid "alt+d=back to list"
+msgid "Alt+key/input: v=back to list d=jump to diff"
 msgstr ""
 
 #, c-format
 msgid ""
 "%d/%d scripts (filter: %s) | Sort: %s | Alt+key/input: i=install r=remove "
-"l=load L=reload u=unload h=(un)hold d=show detail | Input: q=close $=refresh "
+"l=load L=reload u=unload h=(un)hold v=view script | Input: q=close $=refresh "
 "s:x,y=sort words=filter *=reset filter | Mouse: left=select right=install/"
 "remove"
 msgstr ""
@@ -7871,6 +7887,7 @@ msgid ""
 "  alt+L  reload script\n"
 "  alt+u  unload script\n"
 "  alt+h  (un)hold script\n"
+"  alt+v  view script\n"
 "\n"
 "Input allowed on script buffer:\n"
 "  i/r/l/L/u/h  action on script (same as keys above)\n"
@@ -7916,6 +7933,21 @@ msgid ""
 "%e=extension, %l=language, %L=license, %n=name with extension, %N=name, "
 "%r=requirements, %s=status, %t=tags, %u=date updated, %v=version, %V=version "
 "loaded, %w=min_weechat, %W=max_weechat)"
+msgstr ""
+
+msgid "colorize output of diff"
+msgstr ""
+
+msgid ""
+"command used to show differences between script installed and the new "
+"version in repository (\"auto\" = auto detect diff command (git or diff), "
+"empty value = disable diff, other string = name of command, for example "
+"\"diff\")"
+msgstr ""
+
+msgid ""
+"display source code of script on buffer with detail on a script (script is "
+"downloaded in a temporary file when detail on script is displayed)"
 msgstr ""
 
 msgid ""
@@ -8065,6 +8097,30 @@ msgstr ""
 #, fuzzy
 msgid "scripts from repository"
 msgstr "Список сокращений:\n"
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "popular"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "installed"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "autoloaded"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "held"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "running"
+msgstr ""
+
+#. TRANSLATORS: translation must be one short word without spaces (replace spaces by underscores if needed)
+msgid "obsolete"
+msgstr ""
 
 #, fuzzy, c-format
 msgid "%s%s: error reading list of scripts"
